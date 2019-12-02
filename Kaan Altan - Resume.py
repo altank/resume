@@ -2,7 +2,7 @@
 Kaan Altan - Resume.py
 
 Author: Kaan Altan
-Date: 2019-11-26
+Date: 2019-11-25
 
 Description
 ===========
@@ -25,9 +25,14 @@ History
                 -s      : Prints all content in the skills dictionary
                 -lss    : Lists keys in the skills dictionary (Skill titles)
                 -sid    : Prints specified skills when a skill title is passed in
+
+2019-12-02  Add scraping functionality (skills not supported)
+                -sc     : Enables scraping mode, scrapes file passed in and uses that to display requested information
+
 """
 
 import argparse
+from pathlib import Path
 
 """Dictionary containing identifying information"""
 kaan_info = {   "Name"      : "Kaan Altan",
@@ -149,8 +154,11 @@ def parse_arguments():
 
     Returns
     =======
-    arguments
+    arguments   : Dictionary
         Dictionary containing parsed arguments
+    
+    scrape_path : Path object
+        Path object to passed in file path
     """
 
     parser = argparse.ArgumentParser()
@@ -160,11 +168,13 @@ def parse_arguments():
                                  This script is a version of my resume written in Python. It 
                                  provides a command line interface for interaction. You can 
                                  use the following flags to display various items of my resume 
-                                 or simply run it  without flags to display full resume.                              
+                                 or simply run it  without flags to display full resume. 
+                                 Use -sc flag to enable scraping mode and pass in the file
+                                 path to the resume you wish to parse.                             
                                  ===================================================="""
 
     parser.add_argument("-i", "--info", 
-                        help = "Displays applicant information",
+                        help = "Display applicant information",
                         action = "store_true",)
 
     parser.add_argument("-n", "--name", 
@@ -207,6 +217,10 @@ def parse_arguments():
                         help = "Display applicant skills titles",
                         action = "store_true",)
 
+    parser.add_argument("-sc", "--scrape", 
+                        help = "Pass this flag if you want to scrape a specific resume instead of displaying my information",
+                        nargs='+')
+
     args = parser.parse_args()
 
     info = args.info
@@ -229,6 +243,11 @@ def parse_arguments():
     else:
         skills_id = None
 
+    if args.scrape:
+        scrape_path = Path(''.join(args.scrape))
+    else:
+        scrape_path = None
+
     arguments = {   "Info":info, 
                     "Name":name,
                     "Phone":phone,
@@ -242,83 +261,138 @@ def parse_arguments():
                     "Skills_ID":skills_id,
                 }
     
-    return arguments
+    return arguments, scrape_path
 
-def print_resume(arguments):
+def print_resume(arguments, scrape_path = None):
     """Function that handles printing logic according to the flags passed into the command line
 
     Parameters
     ==========
-    arguments : dictionary
+    arguments   : Dictionary
         Dictionary containing parsed arguments
+    
+    scrape_path : Path object
+        Path object to passed in file path
 
     Returns
     =======
     None
     """
-    if any(arguments.values()):
-        if arguments["Feature_Titles"]:
-            for key in kaan_features.keys():
-                print(key)
+    if scrape_path:
+        import scrape_resume
+        try:
+            text, text_list = scrape_resume.extract_text(scrape_path)
+            applicant_info = scrape_resume.build_applicant_id(text)
+            applicant_features = scrape_resume.build_applicant_features(text_list)
+        except:
+            print("Can't parse resume. Check file path and extension.")
+            return None
 
-        if arguments["Skill_Titles"]:
-            for key in kaan_skills.keys():
-                print(key)
+        if any(arguments.values()):
+            if arguments["Feature_Titles"]:
+                for key in applicant_features:
+                    print(key)
 
-        if arguments["Info"]:
+            if arguments["Skill_Titles"]:
+                print("Skills are not supported in scrape mode.")
+
+            if arguments["Info"]:
+                for key in applicant_info.keys():
+                    print(key + ' : ' + f'{applicant_info[key]}')
+            else:
+                for key in list(arguments.keys())[1:5]:
+                    if arguments[key]:
+                        print(key + ' : ' + f'{applicant_info[key]}')
+
+            if arguments["Feature_ID"]:
+                if arguments["Feature_ID"] in applicant_features.keys():
+                    print(arguments["Feature_ID"] + ':\n')
+                    print(applicant_features[arguments["Feature_ID"]])
+                    print('\n')
+                else:
+                    print('Error. Please check entry.')
+
+            elif arguments["Features"]:
+                for key in applicant_features.keys():
+                    print(key + '\n')
+                    print(applicant_features[key])
+                    print('\n')
+
+            if arguments["Skills_ID"]:
+                print("Skills are not supported in scrape mode.")
+                        
+            elif arguments["Skills"]:
+                print("Skills are not supported in scrape mode.")
+        
+        else:
+            for key in applicant_info.keys():
+                print(key + ' : ' + f'{applicant_info[key]}')
+            print('\n')
+
+            for key in applicant_features.keys():
+                print(key + '\n')
+                print(applicant_features[key])
+                print('\n')
+    else:
+        if any(arguments.values()):
+            if arguments["Feature_Titles"]:
+                for key in kaan_features:
+                    print(key)
+
+            if arguments["Skill_Titles"]:
+                for key in kaan_skills:
+                    print(key)
+
+            if arguments["Info"]:
+                for key in kaan_info.keys():
+                    print(key + ' : ' + kaan_info[key])
+            else:
+                for key in list(arguments.keys())[1:5]:
+                    if arguments[key]:
+                        print(key + ' : ' + kaan_info[key])
+
+            if arguments["Feature_ID"]:
+                if arguments["Feature_ID"] in kaan_features.keys():
+                    print(arguments["Feature_ID"] + ':\n')
+                    print(kaan_features[arguments["Feature_ID"]])
+                    print('\n')
+                else:
+                    print('Invalid title entered')
+            elif arguments["Features"]:
+                for key in kaan_features.keys():
+                    print(key + '\n')
+                    print(kaan_features[key])
+                    print('\n')
+
+            if arguments["Skills_ID"]:
+                if arguments["Skills_ID"] in kaan_skills.keys():
+                    print(arguments["Skills_ID"] + ':\n')
+                    print(kaan_skills[arguments["Skills_ID"]])
+                    print('\n')
+                else:
+                    print('Invalid title entered')
+            elif arguments["Skills"]:
+                for key in kaan_skills.keys():
+                    print(key + '\n')
+                    print(kaan_skills[key])
+                    print('\n')
+        else:
             for key in kaan_info.keys():
                 print(key + ' : ' + kaan_info[key])
-        else:
-            for key in list(arguments.keys())[1:5]:
-                if arguments[key]:
-                    print(key + ' : ' + kaan_info[key])
+            print('\n')
 
-        if arguments["Feature_ID"]:
-            if arguments["Feature_ID"] in kaan_features.keys():
-                print(arguments["Feature_ID"] + ':\n')
-                print(kaan_features[arguments["Feature_ID"]])
-                print('\n')
-            else:
-                print('Invalid title entered')
-
-        elif arguments["Features"]:
             for key in kaan_features.keys():
                 print(key + '\n')
                 print(kaan_features[key])
                 print('\n')
 
-        if arguments["Skills_ID"]:
-            if arguments["Skills_ID"] in kaan_skills.keys():
-                print(arguments["Skills_ID"] + ':\n')
-                print(kaan_skills[arguments["Skills_ID"]])
-                print('\n')
-            else:
-                print('Invalid title entered')
-                    
-        elif arguments["Skills"]:
             for key in kaan_skills.keys():
                 print(key + '\n')
                 print(kaan_skills[key])
                 print('\n')
-    
-    else:
-        for key in kaan_info.keys():
-            print(key + ' : ' + kaan_info[key])
-        print('\n')
-
-        for key in kaan_features.keys():
-            print(key + '\n')
-            print(kaan_features[key])
-            print('\n')
-
-        for key in kaan_skills.keys():
-            print(key + '\n')
-            print(kaan_skills[key])
-            print('\n')
-
 def main():
-    arguments = parse_arguments()
-    print_resume(arguments)
+    arguments, scrape_path = parse_arguments()
+    print_resume(arguments, scrape_path)  
 
 if __name__ == '__main__':
     main()
